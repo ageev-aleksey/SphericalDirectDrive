@@ -1,0 +1,7 @@
+build/
+.vs/
+.idea/
+libs/
+tests/googletest/
+cmake*/
+diagrams/
