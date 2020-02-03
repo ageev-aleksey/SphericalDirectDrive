@@ -64,10 +64,18 @@ private:
 };
 
 
-int main() {
-    std::shared_ptr<EventLoop> loop;
-    ComWorker com(1, loop->createConnector());
+void test_ComPort() {
+    Serial com(1);
+	com.setBaudRate(Serial::BaudRate::BR9600).open();
+	
+    com.write(std::vector<unsigned char>{ 'H', 'e', 'l', 'l', 'o' });
 
+}
+
+int main() {
+  //  std::shared_ptr<EventLoop> loop;
+    //ComWorker com(1, loop->createConnector());
+    test_ComPort();
 
 
 	/*Serial comport(1);

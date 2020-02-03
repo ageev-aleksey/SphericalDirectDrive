@@ -38,6 +38,7 @@ std::shared_ptr<IMessage> Event::execute(std::shared_ptr<IMessage> message) cons
 {
 	std::shared_ptr<IMessage> msg = message;
 	for (auto &func : handlers) {
+
 		msg = func(msg);
 	}
 	return msg;

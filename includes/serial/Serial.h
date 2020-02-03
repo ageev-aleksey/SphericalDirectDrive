@@ -27,8 +27,9 @@ public:
 
 	Serial(size_t port_mumber, Mode mode = SYNC);
 	Serial();
+	~Serial();
 
-	Serial& setTimeout(size_t timeout);
+	Serial& setTimeout(size_t ms);
 	Serial& setBaudRate(BaudRate baudrate);
 	Serial& setPort(size_t number_port);
 	Serial& setStopBits(StopBits stop_bits);
@@ -36,7 +37,7 @@ public:
 	Serial& disableParityControll();
 	void open();
 	std::vector<unsigned char> read(size_t num_read);
-	void write(std::vector<unsigned char> buffer);
+	void write(const std::vector<unsigned char> &buffer);
 
 private:
 	SerialImpl *pimpl;

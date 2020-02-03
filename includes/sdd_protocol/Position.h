@@ -9,7 +9,7 @@
 class Position :  Package{
 public:
     Position();
-    Position(std::vector<Package::byte_t> bin_buff);
+    Position(std::vector<Package::byte_t> &bin_buff);
 
     short posX();
     void setPosX(short x);

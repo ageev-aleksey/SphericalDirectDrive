@@ -20,7 +20,7 @@ class EventLoop;
 	*/
 class Connector {
 public:
-	Connector(std::shared_ptr<EventLoop> loop_ptr, int id);
+	Connector(std::weak_ptr<EventLoop> loop_ptr, int id);
 	Connector(Connector && obj);
 	Connector &&operator=(Connector &&obj);
 
@@ -75,7 +75,10 @@ private:
 */
 class EventLoop {
 public:
-	EventLoop();
+	/**
+		\brief Создание цикла событй
+	*/
+	static std::shared_ptr<EventLoop> create();
 	~EventLoop();
 	/**
 		\brief Добавления события, на которые должен реагировать EventLoop. Если придет IMessage
@@ -88,7 +91,7 @@ public:
 	/**
 		\brief Создает объект класса Connector, связанный с данным EventLoop. 
 	*/
-    Connector&& createConnector();
+	std::shared_ptr<Connector> createConnector();
 	/**
 		\brief Запускает работу цикла событий
 
@@ -101,6 +104,7 @@ public:
     void stop();
 	EventLoopImpl* Pimpl();
 private:
+	EventLoop();
 	int last_id_connector;
 	EventLoopImpl *data;
 	/**/

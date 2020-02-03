@@ -11,17 +11,33 @@ public:
 	SerialImpl(size_t number_port, Serial::Mode mode) {
 		port = number_port;
         hWinSerial = INVALID_HANDLE_VALUE;
+        timeout = 0xFFFFFFFF;
         if(mode == Serial::Mode::SYNC) {
-                func_read = &SerialImpl::read_sync;
-                func_write = &SerialImpl::write_sync;
+            _mode = FILE_ATTRIBUTE_NORMAL;
+            hEventAsyncRead = INVALID_HANDLE_VALUE;
+            func_read = &SerialImpl::read_sync;
+//                func_write = &SerialImpl::write_sync;
         } else {
+            _mode = FILE_FLAG_OVERLAPPED;
+            hEventAsyncRead = CreateEvent(NULL,TRUE,FALSE,NULL);
+            if(  hEventAsyncRead == INVALID_HANDLE_VALUE) {
+                throw SerialError("error create event object (windows) foe async work", GetLastError());
+                _mode = FILE_ATTRIBUTE_NORMAL;
+                func_read = &SerialImpl::read_sync;
+            }
             func_read = &SerialImpl::read_async;
-            func_write = &SerialImpl::write_async;
+           // func_write = &SerialImpl::write_async;
         }
 
 
 	}
-
+	~SerialImpl() {
+		if (hWinSerial != INVALID_HANDLE_VALUE) CloseHandle(hWinSerial);
+		if (hEventAsyncRead != INVALID_HANDLE_VALUE) CloseHandle(hWinSerial);
+	}
+	void setTimeout(size_t ms) {
+	    timeout = ms;
+	}
 	void setBaudRate(Serial::BaudRate _boundrate) {
 		boundrate = _boundrate;
 	}
@@ -43,7 +59,7 @@ public:
 	void open() {
 		std::string str_port = std::string("COM") + std::to_string(port);
 		hWinSerial = CreateFile(TEXT(str_port.c_str()), GENERIC_READ | GENERIC_WRITE, 0, NULL,
-			OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			OPEN_EXISTING, _mode, NULL);
 		if (hWinSerial == INVALID_HANDLE_VALUE) {
 			throw SerialOpenError(std::string("failed open port: ") + str_port,
 								GetLastError());
@@ -65,7 +81,7 @@ public:
 
 		// Now set the timeouts ( we control the timeout overselves using WaitForXXX()
 		COMMTIMEOUTS timeouts;
-		timeouts.ReadIntervalTimeout = 0xFFFFFFFF;
+		timeouts.ReadIntervalTimeout = timeout; //максимальное врем€ ожидани€ получени€ очередного нового символа
 		timeouts.ReadTotalTimeoutMultiplier = 0;
 		timeouts.ReadTotalTimeoutConstant = 0xFFFFFFFF;
 		timeouts.WriteTotalTimeoutMultiplier = 0;
@@ -91,6 +107,42 @@ public:
 
 	std::vector<unsigned char> read(size_t size_read) {
 		return (this->*func_read)(size_read);
+	}
+
+	void write(const std::vector<unsigned char> &buff) {
+        if(hWinSerial == INVALID_HANDLE_VALUE) {
+            throw SerialWriteError("com port was not opened", 0);
+        }
+        DWORD feedback = 0;
+        //TODO »спользовать ли временный буфе иили оставить так? - указатель на первый эелемент вектора
+        //¬ектор это денамический массив, но кто сказал, что он реализован, как массив и все данные лежат
+        //последовательно
+        unsigned char tmp[TEMP_BUFFER_SIZE] = {0};
+		size_t copy= 0;
+		while (copy != buff.size()) {
+			size_t copy_size = 0;
+			if (buff.size() < TEMP_BUFFER_SIZE) {
+				for (size_t i = 0; i < buff.size(); i++) {
+					tmp[i] = buff[i];
+				}
+				copy = buff.size();
+				copy_size = copy;
+			}
+			else {
+				for (size_t i = 0; (i+copy) < buff.size() && (i < TEMP_BUFFER_SIZE); i++) {
+					tmp[i] = buff[copy + i];
+					copy_size++;
+				}
+			}
+			//TODO ошибка зачемто удалетс€ вектор, хот€ он находитс€ на несколько уровней видимости выше
+			if (!WriteFile(hWinSerial, tmp, copy_size, &feedback, 0) || feedback != copy_size) {
+				CloseHandle(hWinSerial);
+				hWinSerial = INVALID_HANDLE_VALUE;
+				throw SerialWriteError("error, writing data in com port", GetLastError());
+			}
+		}
+		
+
 	}
 
 
@@ -150,25 +202,25 @@ private:
     }
 
     std::vector <unsigned char> read_async(size_t read_size){
-        return std::vector<unsigned char>();
-    }
-
-    void write_sync(std::vector<unsigned char> &buff) {
-
-	}
-
-    void write_async(std::vector<unsigned char> &buff) {
-
+        OVERLAPPED sync = {0};
+		return std::vector <unsigned char>{};
     }
 
 
-    void (SerialImpl::*func_write)(std::vector<unsigned char>&);
+
+
+   // void (SerialImpl::*func_write)(const std::vector<unsigned char>&);
     std::vector <unsigned char> (SerialImpl::*func_read)(size_t);
 	HANDLE hWinSerial;
 	size_t port;
 	Serial::BaudRate boundrate;
 	Serial::StopBits stop_bits;
 	Serial::ParityControll parity;
+	size_t timeout;
+	DWORD _mode;
+	HANDLE hEventAsyncRead;
+
+	static constexpr size_t TEMP_BUFFER_SIZE = 256;
 };
 
 //DWORD WINAPI ThredProc(_In_ LPVOID lpParametr) {
@@ -247,4 +299,17 @@ Serial& Serial::disableParityControll() {
 
 void Serial::open() {
 	pimpl->open();
+}
+
+Serial& Serial::setTimeout(size_t ms) {
+    pimpl->setTimeout(ms);
+    return *this;
+}
+
+void Serial::write(const std::vector<unsigned char> &buffer) {
+    pimpl->write(buffer);
+}
+
+Serial::~Serial() {
+	delete pimpl;
 }

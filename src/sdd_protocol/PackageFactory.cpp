@@ -18,4 +18,5 @@ std::shared_ptr<Package> PackageFactory::createPackage(const std::vector<unsigne
                 throw PackageParseError("unknown package");
         }
     }
+	throw PackageParseError("buffer must have a value");
 }

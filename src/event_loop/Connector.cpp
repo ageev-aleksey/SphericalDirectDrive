@@ -2,42 +2,58 @@
 
 class ConnectorImpl {
 public:
-	ConnectorImpl(std::shared_ptr<EventLoop> loop_ptr, int id) : event_loop(loop_ptr), id(id)
+	ConnectorImpl(std::weak_ptr<EventLoop> loop_ptr, int id) : event_loop(loop_ptr), id(id)
 	{}
 	bool sendMessage(std::shared_ptr<IMessage> message) {
 		if (message != nullptr) {
-			event_loop->sendMessage(message);
+			std::shared_ptr<EventLoop> loop = event_loop.lock();
+			if (loop == nullptr) {
+				return false;
+			}
+			loop->sendMessage(message);
 			return true;
 		}
 		return false;
 	}
 
 	bool registerEvent(std::function<IEventHandler> handler, std::string &&event_type) {
+		std::shared_ptr<EventLoop> loop = event_loop.lock();
+		if (loop == nullptr) {
+			return false;
+		}
 		Event new_event({ handler }, std::move(event_type));
-		event_loop->addEvent(std::move(new_event), id);
-		return false;
+		loop->addEvent(std::move(new_event), id);
+		return true;
 	}
 
 	bool registerEvent(std::function<IEventHandler> handler, Timer timer) {
+		std::shared_ptr<EventLoop> loop = event_loop.lock();
+		if (loop == nullptr) {
+			return false;
+		}
 		Event new_event({ handler }, "EventTime");
-		event_loop->addEvent(std::move(new_event), timer, id);
+		loop->addEvent(std::move(new_event), timer, id);
 		return true;
 	}
 
 
 	bool resetEvent(const std::string &type) {
-		return false;
+		std::shared_ptr<EventLoop> loop = event_loop.lock();
+		if (loop == nullptr) {
+			return false;
+		}
+		loop->delEvent(type, id);
 	}
 
 private:
-	std::shared_ptr<EventLoop> event_loop;
+	std::weak_ptr<EventLoop> event_loop;
 	int id;
 };
 
 ConnectorImpl* Connector::Pimpl() {
 	return data;
 }
-Connector::Connector(std::shared_ptr<EventLoop> loop_ptr, int id)
+Connector::Connector(std::weak_ptr<EventLoop> loop_ptr, int id)
 {
 	data = new ConnectorImpl(loop_ptr, id);
 }

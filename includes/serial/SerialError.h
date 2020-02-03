@@ -5,7 +5,7 @@
 
 class SerialError : std::runtime_error {
 public:
-	SerialError(std::string what, uint32_t error_code);
+	SerialError(const std::string &what, uint32_t error_code);
 	virtual uint32_t getCode();
 private:
 	uint32_t error;
@@ -14,12 +14,16 @@ private:
 
 class SerialOpenError : public SerialError {
 public:
-	SerialOpenError(std::string what, uint32_t error_code);
+	SerialOpenError(const std::string &what, uint32_t error_code);
 };
 
 class SerialReadError : public SerialError {
 public:
-    SerialReadError(std::string what, uint32_t error_code);
+    SerialReadError(const std::string &what, uint32_t error_code);
 };
 
+class SerialWriteError: public SerialError {
+public:
+    SerialWriteError(const std::string &what, uint32_t error_code);
+};
 #endif

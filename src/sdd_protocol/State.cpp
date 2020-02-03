@@ -10,13 +10,13 @@ State::State(const std::vector<Package::byte_t> &bin_buff) : Package("state", 20
     fromBinary(bin_buff);
 }
 
-
+/*
 void State::fromBinary(std::vector<Package::byte_t> bin_buff) {//TODO копирование
    if((bin_buff.size() == 36) && (bin_buff[0] == id())) {
         bworker.fromBinary(bin_buff, 1); //TODO копирование
    }
 
-}
+}*/
 
 Package::byte_t State::state() {
     return findField("TW")->to<Package::byte_t>()[0];

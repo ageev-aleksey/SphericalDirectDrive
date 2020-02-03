@@ -31,7 +31,9 @@ if(Boost_FOUND)
 			${SOURCES_DIR}/sdd_protocol/PackageError.cpp
 			${SOURCES_DIR}/sdd_protocol/PackageFactory.cpp
 			${SOURCES_DIR}/sdd_protocol/State.cpp
-			${SOURCES_DIR}/sdd_protocol/Position.cpp)
+			${SOURCES_DIR}/sdd_protocol/Position.cpp
+			${SOURCES_DIR}/sdd_protocol/Mode.cpp
+			${SOURCES_DIR}/sdd_protocol/Light.cpp)
 
 	set(SOURCE_SERIAL
 			${SOURCES_DIR}/serial/Mutex.cpp

@@ -3,8 +3,7 @@
 #include <queue>
 #include<list>
 #include <unordered_map>
-#include <mutex>
-#include<thread>
+#include "Mutex.h"
 #include<chrono>
 
 using namespace std::chrono;
@@ -21,26 +20,26 @@ public:
 	{}
 
 	void addEvent(const Event &event, int register_id = 0) {
-		while (!mutex_global.try_lock()) {}
+		mutex_global.lock();
 
 		events_map.insert({ event.getType(), { std::move(event), register_id } });
 
-		mutex_global.unlock();
+		mutex_global.release();
 	}
 
 	void addEvent(const Event &event,const Timer &timer, int registrar_id = 0) {
-		while (!mutex_global.try_lock()) {}
+		mutex_global.lock();
 
 		time_events.push_back({ {event, registrar_id}, timer });
 
-		mutex_global.unlock();
+		mutex_global.release();
 	}
 
 	void delEvent(std::string event_type, int registrar_id = 0) {
-		mutex_global.lock(); //TODO так как поиск может затянуться, то лучше усыпить процесс.
+		mutex_global.lock(); 
 
 		for (auto itr = time_events.begin(); itr != time_events.end(); itr++) {
-			if ((itr->e.id_conn == registrar_id) && (itr->e.evnt.getType() == event_type)) {
+			if ((itr->description.id_conn == registrar_id) && (itr->description.event.getType() == event_type)) {
 				time_events.erase(itr);
 				break;
 			}
@@ -54,39 +53,50 @@ public:
 			}
 		}
 
-		mutex_global.unlock();
+		mutex_global.release();
 	}
 
 	void sendMessage(std::shared_ptr<IMessage> message) {
-		while (!mutex_global.try_lock()) {}
+		mutex_global.lock();
 
 		queue.push(message);
 
-		mutex_global.unlock();
+		mutex_global.release();
 	}
 
 	void run() {
 		isRun = true;//нужна ли блокировка?
 		while (isRun) {
-			while (!mutex_global.try_lock()) {}
+			mutex_global.lock();
 
 			for (auto &v : time_events) {
 				if (v.timer.isRang()) {
-					std::shared_ptr<IMessage> msg(new IMessage("t"));
-					v.e.evnt.execute(msg);
+					mutex_global.release();
+	
+					v.description.event.execute(std::make_shared<IMessage>("t"));
+
+					mutex_global.lock();
 				}
 			}
+
 			if (!queue.empty()) {
 				std::shared_ptr<IMessage> message = queue.front();
 				queue.pop();
 				auto elist = events_map.equal_range(message->getType());
 				for (auto itr = elist.first; itr != elist.second; itr++) {
-					message = itr->second.evnt.execute(message);
+					mutex_global.release();
+					//TODO Елси менеджер потока прервет этот птоток и запустит другой поток
+					//который добавит новый тип события, что приведет к реалокации таблицы,
+					// то тогда итератор будет невалиден!!
+					message = itr->second.event.execute(message);
+
+					mutex_global.lock();
 				}
 			}
-			mutex_global.unlock();
 
-			std::this_thread::sleep_for(CYCLE_TYME_SLEEP);
+			mutex_global.release();
+
+			//std::this_thread::sleep_for(CYCLE_TYME_SLEEP);
 		}
 	}
 
@@ -99,18 +109,20 @@ private:
 	const std::chrono::milliseconds CYCLE_TYME_SLEEP = 2ms; //TODO Определиться с константой усыпления бесконечного цикла в EventLoop 
 
 	struct event_desc {
-		Event evnt;
+		Event event;
 		int id_conn;
 	};
 	struct time_event {
-		struct event_desc e;
+		struct event_desc description;
 		Timer timer;
 	};
 	std::queue< std::shared_ptr<IMessage> > queue;
 	std::list<struct time_event> time_events;
 	std::unordered_multimap<std::string, struct event_desc> events_map;
-	std::mutex mutex_global;
+	Mutex mutex_global;
 	bool isRun;
+public:
+	std::weak_ptr<EventLoop> self_event_loop;
 };
 
 
@@ -139,9 +151,9 @@ void EventLoop::delEvent(std::string event_type, int registrar_id) {
 void EventLoop::sendMessage(std::shared_ptr<IMessage> message) {
 	Pimpl()->sendMessage(message);
 }
-Connector && EventLoop::createConnector() {
+std::shared_ptr<Connector> EventLoop::createConnector() {
 	//TODO проблема - объект существует на стеке, но указателей через std::shared_ptr нету!!!
-	return Connector(std::shared_ptr<EventLoop>(this), ++last_id_connector);
+	return std::make_shared<Connector>(Pimpl()->self_event_loop, ++last_id_connector);
 }
 void EventLoop::run() {
 	Pimpl()->run();
@@ -149,4 +161,9 @@ void EventLoop::run() {
 void EventLoop::stop() {
 	Pimpl()->stop();
 }
-//TODO Возможно лучше сделать глобальную блокировку при любых манимпуляциях с хранилищем событий
+std::shared_ptr<EventLoop> EventLoop::create() {
+	std::shared_ptr<EventLoop> loop_ptr = std::shared_ptr<EventLoop>(new EventLoop());
+	loop_ptr->Pimpl()->self_event_loop = loop_ptr;
+	return std::move(loop_ptr);
+ }
+

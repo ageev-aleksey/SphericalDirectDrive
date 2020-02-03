@@ -11,7 +11,7 @@ Position::Position() : Package("position", 22, Message::Endianness::LITTLE_ENDIA
     create_all_fields();
 }
 
-Position::Position(std::vector<Package::byte_t > buffer) : Package("position", 22, Message::Endianness::LITTLE_ENDIAN){
+Position::Position(std::vector<Package::byte_t > &buffer) : Package("position", 22, Message::Endianness::LITTLE_ENDIAN){
     create_all_fields();
     fromBinary(buffer);
 }
