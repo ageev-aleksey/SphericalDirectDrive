@@ -30,7 +30,8 @@ public:
 		std::vector<T> result(length_result_vector);
 		size_t data_field_index = 0;
 		for (size_t i = 0; i < length_result_vector; i++) {
-			result[i] = 0;
+			//TODO ни чего не трогал, возникла ошибка 
+			//result[i] = 0;
 			char *byte_ptr =reinterpret_cast<char*> (&result[i]);
 			for (size_t j = 0; (j < sizeof(T)) && (data_field_index < _size); j++) {
 				byte_ptr[j] = _data[data_field_index];

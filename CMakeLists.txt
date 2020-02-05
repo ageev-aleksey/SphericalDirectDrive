@@ -39,7 +39,8 @@ if(Boost_FOUND)
 			${SOURCES_DIR}/serial/Mutex.cpp
 			${SOURCES_DIR}/serial/MutexError.cpp
 			${SOURCES_DIR}/serial/Serial.cpp
-			${SOURCES_DIR}/serial/SerialError.cpp)
+			${SOURCES_DIR}/serial/SerialError.cpp
+			${SOURCES_DIR}/serial/AsyncSerial.cpp)
 		#${SOURCES_DIR}/serial/Buffer.cpp)
 
 	add_library(${PROJECT_NAME} STATIC ${SOURCE_SERIALIZATION}

@@ -1,30 +1,34 @@
+#include <cassert>
 #include "Serial.h"
 #include <vector>
 #include "SerialError.h"
 #include <string>
 #include <Windows.h>
+#include <iostream>
 
 DWORD WINAPI ThredProc(_In_ LPVOID lpParametr);
 
 class SerialImpl {
 public:
 	SerialImpl(size_t number_port, Serial::Mode mode) {
+		internal_buffer_size = 256;
+		internal_buffer = nullptr;
 		port = number_port;
         hWinSerial = INVALID_HANDLE_VALUE;
         timeout = 0xFFFFFFFF;
+		boundrate = Serial::BaudRate::BR9600;
+		stop_bits = Serial::StopBits::ONE;
+		parity = Serial::ParityControll::NOT_CONTROLL;
+		buffer_write_when_read_com = nullptr;
+		sync = { 0 };
+		sync.hEvent = INVALID_HANDLE_VALUE;
+		read_from_last_check = 0;
         if(mode == Serial::Mode::SYNC) {
             _mode = FILE_ATTRIBUTE_NORMAL;
-            hEventAsyncRead = INVALID_HANDLE_VALUE;
             func_read = &SerialImpl::read_sync;
 //                func_write = &SerialImpl::write_sync;
         } else {
             _mode = FILE_FLAG_OVERLAPPED;
-            hEventAsyncRead = CreateEvent(NULL,TRUE,FALSE,NULL);
-            if(  hEventAsyncRead == INVALID_HANDLE_VALUE) {
-                throw SerialError("error create event object (windows) foe async work", GetLastError());
-                _mode = FILE_ATTRIBUTE_NORMAL;
-                func_read = &SerialImpl::read_sync;
-            }
             func_read = &SerialImpl::read_async;
            // func_write = &SerialImpl::write_async;
         }
@@ -32,31 +36,71 @@ public:
 
 	}
 	~SerialImpl() {
-		if (hWinSerial != INVALID_HANDLE_VALUE) CloseHandle(hWinSerial);
-		if (hEventAsyncRead != INVALID_HANDLE_VALUE) CloseHandle(hWinSerial);
+		close();
 	}
 	void setTimeout(size_t ms) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then change timeout of read operation.",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
 	    timeout = ms;
 	}
 	void setBaudRate(Serial::BaudRate _boundrate) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then change baud rate.", 
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
 		boundrate = _boundrate;
 	}
 
 	void setPort(size_t num_port) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then change number of port.", 
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
 		port = num_port;
 	}
 
 	void setStopBits(Serial::StopBits _stop_bits) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then change number of stop bits.", 
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
 		stop_bits = _stop_bits;
 	}
 
 	void enableParityControll(Serial::ParityControll controll) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then change parity controll.", 
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
 		parity = controll;
+	}
+
+	void setInternalBufferSize(size_t value) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then change size of internal buffer.", 
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		if (value == 0) {
+			throw SerialError("Size of internal buffer can not be equal zero", 
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		internal_buffer_size = value;
+
 	}
 
 
 
 	void open() {
+		internal_buffer = new unsigned char[internal_buffer_size];
+
 		std::string str_port = std::string("COM") + std::to_string(port);
 		hWinSerial = CreateFile(TEXT(str_port.c_str()), GENERIC_READ | GENERIC_WRITE, 0, NULL,
 			OPEN_EXISTING, _mode, NULL);
@@ -91,60 +135,117 @@ public:
 				GetLastError());
 		}
 
+		if (_mode = Serial::Mode::ASYNC) {
+			sync.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+			if (sync.hEvent == INVALID_HANDLE_VALUE) {
+				_mode = FILE_ATTRIBUTE_NORMAL;
+				func_read = &SerialImpl::read_sync;
+				throw SerialOpenError("error create event object (windows) for async work", GetLastError());
+			}
 
-		//открытие потока, для записи всех входящих пакетов в собственный буффер
-		/*hWinThread = CreateThread(NULL, 0, ThredProc, this, 0, NULL);
-		if (hWinThread == NULL) {
-			throw SerialOpenError(std::string("failed create thread for buffering arriving packages"),
-				GetLastError());
-		}*/
+			if (!SetCommMask(hWinSerial, EV_RXCHAR)) {
+				CloseHandle(hWinSerial);
+				hWinSerial = INVALID_HANDLE_VALUE;
+				CloseHandle(sync.hEvent);
+				sync.hEvent = INVALID_HANDLE_VALUE;
+				throw SerialOpenError("Error configure Serial for asynchrone work",
+					GetLastError());
+			}
+			DWORD last_error = 0;
+			DWORD state = 0;
+			if (!WaitCommEvent(hWinSerial, &state, &sync) && (last_error = GetLastError()) != ERROR_IO_PENDING) {
+				CloseHandle(hWinSerial);
+				hWinSerial = INVALID_HANDLE_VALUE;
+				CloseHandle(sync.hEvent);
+				sync.hEvent = INVALID_HANDLE_VALUE;
+				throw SerialOpenError("Error binding of system object with com-port",
+					last_error);
+			}
 
+		}
 	}
 
 	bool isOpen() {
         return hWinSerial != INVALID_HANDLE_VALUE;
 	}
 
-	std::vector<unsigned char> read(size_t size_read) {
-		return (this->*func_read)(size_read);
+	void read(std::shared_ptr< std::vector<unsigned char> > &buff_ptr) {
+		return (this->*func_read)(buff_ptr);
 	}
 
 	void write(const std::vector<unsigned char> &buff) {
         if(hWinSerial == INVALID_HANDLE_VALUE) {
-            throw SerialWriteError("com port was not opened", 0);
+            throw SerialWriteError("com port was not opened", 
+				SerialError::NOT_SYSTEM_CALL_ERROR);
         }
         DWORD feedback = 0;
-        //TODO Использовать ли временный буфе иили оставить так? - указатель на первый эелемент вектора
-        //Вектор это денамический массив, но кто сказал, что он реализован, как массив и все данные лежат
-        //последовательно
-        unsigned char tmp[TEMP_BUFFER_SIZE] = {0};
 		size_t copy= 0;
-		while (copy != buff.size()) {
-			size_t copy_size = 0;
-			if (buff.size() < TEMP_BUFFER_SIZE) {
-				for (size_t i = 0; i < buff.size(); i++) {
-					tmp[i] = buff[i];
-				}
-				copy = buff.size();
-				copy_size = copy;
-			}
-			else {
-				for (size_t i = 0; (i+copy) < buff.size() && (i < TEMP_BUFFER_SIZE); i++) {
-					tmp[i] = buff[copy + i];
-					copy_size++;
-				}
-			}
-			//TODO ошибка зачемто удалется вектор, хотя он находится на несколько уровней видимости выше
-			if (!WriteFile(hWinSerial, tmp, copy_size, &feedback, 0) || feedback != copy_size) {
-				CloseHandle(hWinSerial);
-				hWinSerial = INVALID_HANDLE_VALUE;
-				throw SerialWriteError("error, writing data in com port", GetLastError());
-			}
-		}
-		
-
+		if (!WriteFile(hWinSerial, &buff[0], buff.size(), &feedback, 0) || feedback != buff.size()) {
+            CloseHandle(hWinSerial);
+            hWinSerial = INVALID_HANDLE_VALUE;
+            throw SerialWriteError("error, writing data in com port", GetLastError());
+        }
 	}
 
+    std::shared_ptr< std::vector<unsigned char> > isReadAlready() {
+		if (!isOpen()) {
+			throw SerialReadError("Serial not opened",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+
+		if (_mode == Serial::Mode::ASYNC) {
+
+			if (buffer_write_when_read_com == nullptr) {
+				throw SerialReadError("asynchrone operation of read don't started",
+					SerialError::NOT_SYSTEM_CALL_ERROR);
+			}
+
+			DWORD wait = WaitForSingleObject(sync.hEvent, 0);
+			DWORD read = 0;
+			DWORD k = 0;
+			if (wait == WAIT_OBJECT_0) {
+				if (GetOverlappedResult(hWinSerial, &sync, &read, FALSE)) {
+					for (size_t i = 0; i < read; i++) {
+						assert(read_from_last_check < buffer_write_when_read_com->size());
+						(*buffer_write_when_read_com)[read_from_last_check] = internal_buffer[i];
+						read_from_last_check++;
+					}
+					if (read_from_last_check == buffer_write_when_read_com->size()) {
+						std::shared_ptr< std::vector<unsigned char> > tmp = std::move( buffer_write_when_read_com);
+						read_from_last_check = 0;
+						return std::move(tmp);
+					}
+					if ((buffer_write_when_read_com->size() - read_from_last_check) < internal_buffer_size) {
+						k = internal_buffer_size - (buffer_write_when_read_com->size() - read_from_last_check);
+					}
+					ReadFile(hWinSerial, internal_buffer, internal_buffer_size - k, &read, &sync);
+				}
+			}
+			return nullptr;
+		}
+		return nullptr;
+	}
+
+	void close() {
+		if (hWinSerial != hWinSerial) {
+			CloseHandle(hWinSerial);
+			hWinSerial = hWinSerial;
+		}
+		if (sync.hEvent != INVALID_HANDLE_VALUE) {
+			CloseHandle(sync.hEvent);
+			sync.hEvent = INVALID_HANDLE_VALUE;
+		}
+		if (internal_buffer != nullptr) {
+			delete[] internal_buffer;
+			internal_buffer = nullptr;
+		}
+	}
+
+	void flush() {
+		if (isOpen()) {
+			PurgeComm(hWinSerial, PURGE_RXCLEAR);
+		}
+	}
 
 private:
 
@@ -177,48 +278,61 @@ private:
 		}
 	}
 
-	std::vector <unsigned char> read_sync(size_t read_size){
+	void read_sync(std::shared_ptr< std::vector<unsigned char> > &buffer_ptr){
 	    if(!isOpen()) {
 	        throw SerialError("Com port is not openned", 0);
 	    }
-	    DWORD readed = 0;
+	    DWORD read = 0;
+		DWORD all_read = 0;
 	    unsigned char tmp_buffer[256] = {0};
-	    DWORD bytes_read = read_size < 256 ? read_size : 256;
-	    std::vector<unsigned char> res(read_size);
-	    do {
-	        DWORD current_readed = 0;
-	        BOOL read_result = ReadFile(hWinSerial, tmp_buffer, bytes_read, &current_readed, NULL);
-	        if(read_result == FALSE) {
-	            throw SerialReadError("error read", GetLastError());
-	        }
-            for(size_t i = readed; i < current_readed; i++) {
-                res[i] = tmp_buffer[i-readed];
-            }
-	        readed += current_readed;
+		/*while (all_read != read_size) {
+			if ((!ReadFile(hWinSerial, &buff[0] + all_read, read_size - all_read, &read, NULL)) && (read != read_size)) {
+				CloseHandle(hWinSerial);
+				hWinSerial = INVALID_HANDLE_VALUE;
+				throw SerialReadError("was less readed than necessary", GetLastError());
+			}
+			all_read += read;
 
-	    }while(readed != read_size);
-
-	    return res;
+		}*/
     }
 
-    std::vector <unsigned char> read_async(size_t read_size){
-        OVERLAPPED sync = {0};
-		return std::vector <unsigned char>{};
+	void read_async(std::shared_ptr< std::vector<unsigned char> > &buffer_ptr) {
+		if (!isOpen()) {
+			throw SerialReadError("Serial not opened",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		
+		if (buffer_write_when_read_com != nullptr) {
+			throw SerialReadError("asynchrone operation of read already started",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		buffer_write_when_read_com = std::move(buffer_ptr);
+		DWORD must_read = internal_buffer_size;
+		DWORD read = 0;
+		if (internal_buffer_size > buffer_write_when_read_com->size()) {
+			must_read = buffer_write_when_read_com->size();
+		}
+		//ReadFile(hWinSerial, (&buff[0] + result_read), read_size - result_read, &read, &sync);
+		ReadFile(hWinSerial, internal_buffer, must_read, &read, &sync);
     }
 
 
 
 
    // void (SerialImpl::*func_write)(const std::vector<unsigned char>&);
-    std::vector <unsigned char> (SerialImpl::*func_read)(size_t);
+	void (SerialImpl::*func_read)(std::shared_ptr< std::vector<unsigned char> >&);
 	HANDLE hWinSerial;
 	size_t port;
 	Serial::BaudRate boundrate;
 	Serial::StopBits stop_bits;
 	Serial::ParityControll parity;
-	size_t timeout;
-	DWORD _mode;
-	HANDLE hEventAsyncRead;
+	size_t timeout;//таймаут синхронного чтения.
+	DWORD _mode; //режим. Асинхронный или синхронный
+	unsigned char *internal_buffer;//временный буфер, в который записывает ОС
+	size_t internal_buffer_size; // размер временного буфера, в который записывает ОС
+	std::shared_ptr<std::vector<unsigned char>> buffer_write_when_read_com;//буфер в который записывать при асинхронном чтении
+	size_t read_from_last_check;//индекс заполняемости буфера, в который записывются данные при асинхронном чтении
+	OVERLAPPED sync; //Структура, с помощью которой ОС сигнализирует о возможности чтения из порта
 
 	static constexpr size_t TEMP_BUFFER_SIZE = 256;
 };
@@ -268,8 +382,8 @@ Serial::Serial(size_t port_mumber, Mode mode) {
 	pimpl = new SerialImpl(port_mumber, mode);
 }
 
-std::vector<unsigned char> Serial::read(size_t num_read) {
-	return pimpl->read(num_read);
+void Serial::read(std::shared_ptr< std::vector<unsigned char> > buff_ptr) {
+	pimpl->read(buff_ptr);
 }
 
 Serial& Serial::setBaudRate(BaudRate baudrate) {
@@ -297,6 +411,11 @@ Serial& Serial::disableParityControll() {
 	return *this;
 }
 
+Serial& Serial::setInternalBufferSize(size_t size) {
+	pimpl->setInternalBufferSize(size);
+	return *this;
+}
+
 void Serial::open() {
 	pimpl->open();
 }
@@ -312,4 +431,16 @@ void Serial::write(const std::vector<unsigned char> &buffer) {
 
 Serial::~Serial() {
 	delete pimpl;
+}
+
+std::shared_ptr< std::vector<unsigned char> > Serial::isReadAlready() {
+	return pimpl->isReadAlready();
+}
+
+void Serial::close() {
+	pimpl->close();
+}
+
+void Serial::flush() {
+	pimpl->flush();
 }

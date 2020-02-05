@@ -1,12 +1,12 @@
 #ifndef _SERIAL_H_
 #define _SERIAL_H_
 #include <vector>
+#include <memory>
 
 class SerialImpl;
 
 class Serial {
 public:
-	
 	enum BaudRate {
 		BR110 = 110, BR300 = 300, BR600 = 600, BR1200 = 1200, BR2400 = 2400, 
 		BR4800 = 4800, BR9600 = 9600, BR14400 = 14400, BR19200 = 19200,
@@ -35,8 +35,12 @@ public:
 	Serial& setStopBits(StopBits stop_bits);
 	Serial& enableParityControll(ParityControll pc);
 	Serial& disableParityControll();
+	Serial& setInternalBufferSize(size_t size);
 	void open();
-	std::vector<unsigned char> read(size_t num_read);
+	void close();
+	void flush();
+    std::shared_ptr< std::vector<unsigned char> > isReadAlready();
+	void read(std::shared_ptr< std::vector<unsigned char> > buff_ptr);
 	void write(const std::vector<unsigned char> &buffer);
 
 private:

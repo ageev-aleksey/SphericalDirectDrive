@@ -18,3 +18,6 @@ add_subdirectory(${GTEST_DIR})
 
 add_executable(${PROJECT_NAME} ${TESTS_SOURCE})
 target_link_libraries(${PROJECT_NAME} PUBLIC SPPU_SERIAL gtest gtest_main)
+
+add_executable(PackageSenderToSerial ${PROJECT_SOURCE_DIR}/src/PackageSenderToSerial.cpp)
+target_link_libraries(PackageSenderToSerial SPPU_SERIAL)

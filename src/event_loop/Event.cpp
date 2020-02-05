@@ -1,5 +1,5 @@
 #include  "Event.h"
-
+#include <iostream>
 
 
 Event::Event(std::initializer_list<std::function<IEventHandler>> hlist, std::string type) : type(type) {
@@ -38,8 +38,13 @@ std::shared_ptr<IMessage> Event::execute(std::shared_ptr<IMessage> message) cons
 {
 	std::shared_ptr<IMessage> msg = message;
 	for (auto &func : handlers) {
-
-		msg = func(msg);
+		try {
+			 func(msg);
+		}
+		catch (...) {
+			std::cout << "error";
+		}
+		
 	}
 	return msg;
 }
