@@ -40,8 +40,9 @@ public:
 	void close();
 	void flush();
     std::shared_ptr< std::vector<unsigned char> > isReadAlready();
+	bool isWriteAlready();
 	void read(std::shared_ptr< std::vector<unsigned char> > buff_ptr);
-	void write(const std::vector<unsigned char> &buffer);
+	void write(std::shared_ptr< std::vector<unsigned char> > buff_ptr);
 
 private:
 	SerialImpl *pimpl;

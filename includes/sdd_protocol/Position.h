@@ -6,7 +6,7 @@
 #define SPPU_SERIAL_POSITION_H
 #include "Package.h"
 
-class Position :  Package{
+class Position : public Package{
 public:
     Position();
     Position(std::vector<Package::byte_t> &bin_buff);

@@ -7,6 +7,8 @@ Message::Message(Endianness endianness)
 	size_message = 0;
 }
 
+Message::~Message() {}
+
 void Message::addField(Field field) {
 	std::string fname = field.name();
 	auto itr = index.find(fname);

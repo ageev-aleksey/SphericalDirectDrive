@@ -5,15 +5,18 @@ Field::Field(std::string field_name, size_t size_field) {
 	_data = new unsigned char[size_field];
 	_size = size_field;
 	_name = field_name;
-
+	for(size_t i = 0; i < size_field; i++) {
+	    _data[i] = 0;
+	}
 }
 
 Field::~Field() {
 	if (_data != nullptr) {
-		if (_size > 1)
+		/*if (_size > 1)
 			delete[] _data;
 		else if (_size == 1)
-			delete _data;
+			delete _data;*/
+		delete[] _data;
 	}
 }
 

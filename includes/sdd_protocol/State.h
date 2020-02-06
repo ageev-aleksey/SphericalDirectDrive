@@ -6,6 +6,7 @@ public:
 	State();
 	State(const std::vector<Package::byte_t> &bin_buff);
 	//void fromBinary(std::vector<Package::byte_t> bin_buff);
+	~State();
 
 	Package::byte_t state();
 	void setState(Package::byte_t s);

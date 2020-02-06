@@ -5,9 +5,15 @@ State::State() : Package("state", 20, Message::Endianness::LITTLE_ENDIAN) {
     create_all_fields();
 }
 
+
+
 State::State(const std::vector<Package::byte_t> &bin_buff) : Package("state", 20, Message::Endianness::LITTLE_ENDIAN) {
     create_all_fields();
     fromBinary(bin_buff);
+}
+
+State::~State() {
+
 }
 
 /*
@@ -31,7 +37,7 @@ short State::OX() {
 }
 
 void State::setOX(short x) {
-    findField("TW")->fill(reinterpret_cast<const unsigned char*>(&x), 2);
+    findField("OX")->fill(reinterpret_cast<const unsigned char*>(&x), 2);
 }
 
 short State::OY() {
@@ -81,14 +87,14 @@ Package::byte_t State::randomValue() {
 
 
 void State::create_all_fields() {
-    bworker.addField("TW", 1);
+    bworker.addField("TW", 2);
     bworker.addField("OX", 2);
     bworker.addField("OY", 2);
-    bworker.addField("-1", 4);//Байты, значения которых не удалось определить
+    bworker.addField("-1", 3);//Байты, значения которых не удалось определить
     bworker.addField("PWMX", 2);
     bworker.addField("PWMY", 2);
     bworker.addField("POSX", 2);
-    bworker.addField("POXY", 2);
-    bworker.addField("-2", 17);//Байты, значения которых не удалось определить
+    bworker.addField("POSY", 2);
+    bworker.addField("-2", 16);//Байты, значения которых не удалось определить
     bworker.addField("R", 1);
 }

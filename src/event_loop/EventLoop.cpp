@@ -73,7 +73,7 @@ public:
 				if (v.timer.isRang()) {
 					mutex_global.release();
 	
-					v.description.event.execute(std::make_shared<IMessage>("t"));
+					v.description.event.execute(nullptr);
 
 					mutex_global.lock();
 				}

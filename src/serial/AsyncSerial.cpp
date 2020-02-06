@@ -5,7 +5,9 @@
 AsyncSerial::AsyncSerial(size_t port_number, std::shared_ptr<Connector> conn)  :
                     com_port(port_number, Serial::Mode::ASYNC), connector(conn) {
     connector->registerEvent(std::bind(&AsyncSerial::async_serial_read_handler, this, std::placeholders::_1), Timer(0));
+	connector->registerEvent(std::bind(&AsyncSerial::async_serial_write_handler, this, std::placeholders::_1), Timer(0));
     set_operation_read = false;
+	set_operation_write = false;
 }
 
 AsyncSerial& AsyncSerial::setBaudRate(Serial::BaudRate baudrate){
@@ -37,11 +39,17 @@ AsyncSerial& AsyncSerial::setInternalBufferSize(size_t size) {
 
 
 
-void AsyncSerial::async_read(size_t size_read, std::function<SerialEventHandler> &&handler) {
-    set_operation_read = true;
+void AsyncSerial::async_read(size_t size_read, std::function<SerialReadHandler> handler) {
     async_read_handler = std::move(handler);
     std::shared_ptr< std::vector<unsigned char> > buff_ptr = std::make_shared< std::vector<unsigned char> >(size_read);
     com_port.read(std::move(buff_ptr));
+	set_operation_read = true;
+}
+
+void AsyncSerial::async_write(std::shared_ptr<std::vector<unsigned char>> buff, std::function<SerialWriteHandler> handler) {
+	async_write_handler = std::move(handler);
+	com_port.write(std::move(buff));
+	set_operation_write = true;
 }
 
 std::shared_ptr<IMessage> AsyncSerial::async_serial_read_handler(std::shared_ptr<IMessage> msg) {
@@ -52,6 +60,17 @@ std::shared_ptr<IMessage> AsyncSerial::async_serial_read_handler(std::shared_ptr
         async_read_handler(std::move(buff));
     }
     return msg;
+}
+
+std::shared_ptr<IMessage> AsyncSerial::async_serial_write_handler(std::shared_ptr<IMessage> msg) {
+	if (!set_operation_write) return msg;
+	if (com_port.isWriteAlready()) {
+		set_operation_write = false;
+		if (!!async_write_handler) {
+			async_write_handler();
+		}
+	}
+	return msg;
 }
 
 void AsyncSerial::open() {

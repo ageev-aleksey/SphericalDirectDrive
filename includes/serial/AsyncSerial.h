@@ -11,7 +11,8 @@
 #include <functional>
 class AsyncSerial;
 
-using SerialEventHandler = void(std::shared_ptr< std::vector<unsigned char> >);
+using SerialReadHandler = void(std::shared_ptr< std::vector<unsigned char> >);
+using SerialWriteHandler = void();
 
 class AsyncSerial {
 public:
@@ -28,14 +29,18 @@ public:
     void close();
 	void flush();
 
-    void async_read(size_t size_read, std::function<SerialEventHandler> &&handler);
-    //TODO void async_write(IEventHandler handler);
+    void async_read(size_t size_read, std::function<SerialReadHandler> handler);
+    void async_write(std::shared_ptr<std::vector<unsigned char>> buff_ptr, std::function<SerialWriteHandler> handler = nullptr);
 private:
     std::shared_ptr<IMessage> async_serial_read_handler(std::shared_ptr<IMessage> msg);
-    std::function<SerialEventHandler>  async_read_handler;
+	std::shared_ptr<IMessage> async_serial_write_handler(std::shared_ptr<IMessage> msg);
+	
+    std::function<SerialReadHandler>  async_read_handler;
+	std::function<SerialWriteHandler>  async_write_handler;
     Serial com_port;
     std::shared_ptr<Connector> connector;
     bool set_operation_read;
+	bool set_operation_write;
 
 };
 

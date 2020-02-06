@@ -1,6 +1,7 @@
 #include "Package.h"
 #include "PackageError.h"
 #include "gtest/gtest.h"
+#include "State.h"
 
 
 class TestPackage : public Package {
@@ -92,4 +93,21 @@ TEST(TestPaclage, TestRaiseExceptionBinaryBufferLengthError) {
     TestPackage p;
     std::vector<unsigned char> bin{1, 1, 154, 0, 66, 48, 0, 0, 41};
     ASSERT_THROW(p.fromBinary(bin), PackageError);
+}
+
+TEST(TestPackageState, TestToBinaryFromBinary) {
+    State pack;
+    pack.setOX(10);
+    pack.setOY(20);
+    pack.setPositionX(115);
+    pack.setPositionY(0);
+    pack.setPWMX(255);
+    pack.setPWMY(-115);
+    State pack2(pack.toBinary());
+    ASSERT_EQ(pack2.OX(), pack.OX());
+    ASSERT_EQ(pack2.OY(), pack.OY());
+    ASSERT_EQ(pack2.positionX(), pack.positionX());
+    ASSERT_EQ(pack2.positionY(), pack.positionY());
+    ASSERT_EQ(pack2.PWMX(), pack.PWMX());
+    ASSERT_EQ(pack2.PWMY(), pack.PWMY());
 }

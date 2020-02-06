@@ -12,6 +12,7 @@ public:
 		LITTLE_ENDIAN
 	};
 	Message(Endianness endianness = LITTLE_ENDIAN);
+	~Message();
 	void addField(Field field);
 	void addField(std::string field_name, size_t num_bytes);
 	std::vector<Field>::iterator get(std::string field_name);
