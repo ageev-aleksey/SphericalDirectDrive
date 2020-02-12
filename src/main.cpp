@@ -61,12 +61,12 @@ public:
 			.open();
 		_com_port.flush();
 		_com_port.async_read(36, std::bind(&ComWorker::readFromComPort, this, std::placeholders::_1));
-		loop->registerEvent(std::bind(&ComWorker::consoleCommands, this, std::placeholders::_1), Timer(0));
 		//TODO сделать обертку над системными вызовами для работы с конослью
 		hConsoleInputBuffer = GetStdHandle(STD_INPUT_HANDLE);
 		hConsoleOutputBuffer = GetStdHandle(STD_OUTPUT_HANDLE);
         GetConsoleMode(hConsoleInputBuffer, &fdwSaveOldMode);
         SetConsoleMode(hConsoleInputBuffer, ENABLE_WINDOW_INPUT);
+		loop->registerEvent(std::bind(&ComWorker::consoleCommands, this, std::placeholders::_1), Timer(0));
     }
 
     void  readFromComPort(std::shared_ptr< std::vector<unsigned char> > data) {
@@ -208,5 +208,35 @@ int main() {
 	ComWorker com(1, loop->createConnector());
 	loop->run();
 	_CrtDumpMemoryLeaks();
+
+#pragma region --===binary_copy_test===--
+	/*long long value = -256;
+	std::vector<unsigned char> bytes(sizeof(value));
+	unsigned char *bptr = reinterpret_cast<unsigned char*>(&value);
+	for (size_t i = 0; i < sizeof(value); i++) {
+	    bytes[i] = bptr[i];
+	}
+	for(auto &el : bytes) {
+	    std::cout << (unsigned int)el << "-";
+	}
+	long long value2 = 0;
+	bptr = reinterpret_cast<unsigned char*>(&value2);
+	for (size_t i = 0; i < sizeof(long long); i++) {
+		bptr[i] = bytes[i];
+	}
+	std::cout << std::endl;
+	std::cout << value2 << std::endl;*/
+#pragma endregion
+
+#pragma region --===field_test===--
+
+	/*long long value = -256;
+	long long value2 = 0;
+	Field field("test", 8);
+	field.fill(reinterpret_cast<unsigned char*>(&value), sizeof(value));
+	value2 = field.to<long long>()[0];
+	std::cout << value2 << std::endl;*/
+
+#pragma endregion
 	return 0;
 }

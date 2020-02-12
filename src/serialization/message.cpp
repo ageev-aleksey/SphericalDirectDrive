@@ -91,6 +91,7 @@ void Message::fromBinary(std::vector<unsigned char> bytes, size_t start)
 	for (; field != fields.end(); field++) {
 		//TODO опасно. применяется move-семантика,но по интерфесу не очевидно
 		unsigned char *tmp = new unsigned char[field->size()];
+
 		if (_endianness == LITTLE_ENDIAN) {
 			for (int i = 0; i < field->size(); i++) {
 				tmp[i] = bytes[buff_index];
@@ -104,7 +105,10 @@ void Message::fromBinary(std::vector<unsigned char> bytes, size_t start)
 				buff_index++;
 			}
 		}
-		field->fill(std::move(tmp), field->size());
+		field->fill(tmp, field->size());//TODO сделать перемещение массива со значением а не его копирование
+
+		if(tmp != nullptr)
+			delete[] tmp;
 	}
 }
 
