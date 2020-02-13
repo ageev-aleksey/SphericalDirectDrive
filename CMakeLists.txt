@@ -6,12 +6,6 @@ set(SOURCES_DIR ${PROJECT_SOURCE_DIR}/src)
 set(INCLUDES_DIR ${PROJECT_SOURCE_DIR}/includes)
 set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 
-set(Boost_USE_STATIC_LIBS OFF) 
-set(Boost_USE_MULTITHREADED ON)  
-set(Boost_USE_STATIC_RUNTIME OFF) 
-find_package(Boost 1.69.0) 
-
-if(Boost_FOUND)
 
 	set(SOURCE_EVENT_LOOP
 			${SOURCES_DIR}/event_loop/IMessage.cpp
@@ -59,4 +53,3 @@ if(Boost_FOUND)
 	#add_library(proj::protocol ALIAS ${PROJECT_NAME})
 
 	add_subdirectory(${TESTS_DIR})
-endif()

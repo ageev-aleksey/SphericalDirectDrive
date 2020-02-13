@@ -87,14 +87,14 @@ Package::byte_t State::randomValue() {
 
 
 void State::create_all_fields() {
-    bworker.addField("TW", 2);
-    bworker.addField("OX", 2);
-    bworker.addField("OY", 2);
-    bworker.addField("-1", 3);//Байты, значения которых не удалось определить
-    bworker.addField("PWMX", 2);
-    bworker.addField("PWMY", 2);
-    bworker.addField("POSX", 2);
-    bworker.addField("POSY", 2);
-    bworker.addField("-2", 16);//Байты, значения которых не удалось определить
-    bworker.addField("R", 1);
+	bworker.addField("TW", 1);
+	bworker.addField("OX", 2);
+	bworker.addField("OY", 2);
+	bworker.addField("-1", 3);//Байты, значения которых не удалось определить
+	bworker.addField("PWMX", 2);
+	bworker.addField("PWMY", 2);
+	bworker.addField("POSX", 2);
+	bworker.addField("POSY", 2);
+	bworker.addField("-2", 17);//Байты, значения которых не удалось определить
+	bworker.addField("R", 1);
 }

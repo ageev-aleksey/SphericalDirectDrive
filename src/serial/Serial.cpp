@@ -220,7 +220,7 @@ public:
 				GetLastError());
 		}
 
-		if (_mode = Serial::Mode::ASYNC) {
+		if (_mode == FILE_FLAG_OVERLAPPED) {
 			sync_read.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			sync_write.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			if ((sync_read.hEvent == INVALID_HANDLE_VALUE) ||
@@ -288,7 +288,7 @@ public:
 				SerialError::NOT_SYSTEM_CALL_ERROR);
 		}
 
-		if (_mode == Serial::Mode::ASYNC) {
+		if (_mode == FILE_FLAG_OVERLAPPED) {
 
 			if (buffer_write_when_read_com == nullptr) {
 				throw SerialReadError("asynchrone operation of read don't started",
@@ -326,7 +326,7 @@ public:
 			throw SerialReadError("Serial not opened",
 				SerialError::NOT_SYSTEM_CALL_ERROR);
 		}
-		if (_mode == Serial::Mode::ASYNC) {
+		if (_mode == FILE_FLAG_OVERLAPPED) {
 
 			if (!async_write_started) {
 				throw SerialReadError("asynchrone operation of read don't started",
@@ -438,16 +438,17 @@ private:
 	    }
 	    DWORD read = 0;
 		DWORD all_read = 0;
+		DWORD read_size = buffer_ptr->size();
 	    unsigned char tmp_buffer[256] = {0};
-		/*while (all_read != read_size) {
-			if ((!ReadFile(hWinSerial, &buff[0] + all_read, read_size - all_read, &read, NULL)) && (read != read_size)) {
+		while (all_read != read_size) {
+			if ((!ReadFile(hWinSerial, &tmp_buffer, read_size - all_read, &read, NULL)) && (read != read_size)) {
 				CloseHandle(hWinSerial);
 				hWinSerial = INVALID_HANDLE_VALUE;
 				throw SerialReadError("was less readed than necessary", GetLastError());
 			}
 			all_read += read;
 
-		}*/
+		}
     }
 
 	void read_async(std::shared_ptr< std::vector<unsigned char> > &buffer_ptr) {		

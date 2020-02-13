@@ -38,7 +38,7 @@ private:
 	byte_t hash(Itr itr_begin, Itr itr_end, std::input_iterator_tag) const {
 		byte_t sum = 0;
 		for (Itr itr = itr_begin; itr != itr_end; itr++) {
-			sum += *itr;
+			sum -= *itr;
 		}
 		return sum;
 	}

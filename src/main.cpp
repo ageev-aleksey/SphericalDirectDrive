@@ -21,6 +21,8 @@
 #include <windows.h>
 
 
+
+
 class Command {
 public:
 	Command(const std::string &str) {
@@ -53,11 +55,19 @@ class ComWorker {
 public:
     ComWorker(size_t com_num, std::shared_ptr<Connector> loop) : _com_port(com_num, loop)
     {
-        _com_port.setBaudRate(Serial::BaudRate::BR9600)
+       /* _com_port.setBaudRate(Serial::BaudRate::BR38400)
 			.disableParityControll()
 			.setStopBits(Serial::StopBits::ONE)
 			.setTimeout(50)
 			.setInternalBufferSize(36)
+			.open();*/
+		//Serial com_port(5, Serial::ASYNC);
+		_com_port.setBaudRate(Serial::BR38400)
+			.setTimeout(50)
+			.disableParityControll()
+			.disableCtsFlow()
+			.disableDsrFlow()
+			.setStopBits(Serial::ONE)
 			.open();
 		_com_port.flush();
 		_com_port.async_read(36, std::bind(&ComWorker::readFromComPort, this, std::placeholders::_1));
@@ -73,19 +83,32 @@ public:
 		//system("cls");
 		int a = 1;
 		SetConsoleCursorPosition(hConsoleOutputBuffer, { 0, 0 });
+		//ClearConsole();
 		PackageFactory packFactory;
         try{
            //std::shared_ptr<State> package =
                  //  std::dynamic_pointer_cast<State>(packFactory.createPackage(*data));
+			for (auto &el : *data) {
+				std::cout << (unsigned int)el << "-";
+			}
+			std::cout << std::endl;
 			auto package = std::make_shared<State>(*data);
-		   std::cout << "Position OX:   "<< (int)package->OX()          << "\n"
-					 << "Position OY:   "<< (int)package->OY()          << "\n"
-					 << "PWM X:         "<< (int)package->PWMX()        << "\n"
-					 << "PWM Y:         "<< (int)package->PWMY()        << "\n"
-					 << "Task to X:     "<< (int)package->positionX()   << "\n"
-					 << "Task to Y:     "<< (int)package->positionY()   << "\n"
-					 << "Random value:  "<< (int)package->randomValue() << "\n"
-					 << "Hash:          "<< (int)package->hash() << std::endl;
+			for (auto &el : *data) {
+						std::cout << (unsigned int)el << "-";
+			}
+			std::cout << std::endl;
+			short ox = 0;
+			ox |= (*data)[2];
+			ox |= (*data)[3] << 8;
+			std::cout << "OX: " << ox << "\n";
+		   std::cout << "Position OX:   "<< (int)package->OX()          << "   \n"
+					 << "Position OY:   "<< (int)package->OY()          << "   \n"
+					 << "PWM X:         "<< (int)package->PWMX()        << "   \n"
+					 << "PWM Y:         "<< (int)package->PWMY()        << "   \n"
+					 << "Task to X:     "<< (int)package->positionX()   << "   \n"
+					 << "Task to Y:     "<< (int)package->positionY()   << "   \n"
+					 << "Random value:  "<< (int)package->randomValue() << "   \n"
+					 << "Hash:          "<< (int)package->hash() << "   "<<std::endl;
         } catch (PackageParseError &exp) {
 			std::cout << "package parse error";
         }
@@ -205,9 +228,9 @@ private:
 
 int main() {
 	std::shared_ptr<EventLoop> loop = EventLoop::create();
-	ComWorker com(1, loop->createConnector());
+	ComWorker com(5, loop->createConnector());
 	loop->run();
-	_CrtDumpMemoryLeaks();
+	//_CrtDumpMemoryLeaks();
 
 #pragma region --===binary_copy_test===--
 	/*long long value = -256;
@@ -236,6 +259,48 @@ int main() {
 	field.fill(reinterpret_cast<unsigned char*>(&value), sizeof(value));
 	value2 = field.to<long long>()[0];
 	std::cout << value2 << std::endl;*/
+
+#pragma endregion
+
+#pragma region --===FromBinaryTest===--
+	//Serial com_port(5, Serial::ASYNC);
+	//com_port.setBaudRate(Serial::BR38400)
+	//	.setTimeout(50)
+	//	.disableParityControll()
+	//	.disableCtsFlow()
+	//	.disableDsrFlow()
+	//	.setStopBits(Serial::ONE)
+	//	.open();
+	//std::shared_ptr<std::vector<unsigned char>> buff = std::make_shared<std::vector<unsigned char>>(36);
+	//HANDLE hConsoleOutputBuffer = GetStdHandle(STD_OUTPUT_HANDLE);
+	//for (int i = 0; i < 10000; i++) {
+	//	com_port.flush();
+	//	com_port.read(buff);
+	//	while(com_port.isReadAlready() == nullptr) {}
+
+	//	//SetConsoleCursorPosition(hConsoleOutputBuffer, { 0, 0 });
+	//	
+
+	//	for (auto &el : *buff) {
+	//		std::cout << (unsigned int)el << "-";
+	//	}
+	//	std::cout << "\n";
+	//	State pack(*buff);
+	//	short ox = 0;
+	//	ox |= (*buff)[2];
+	//	ox |= (*buff)[3] << 8;
+	//	std::cout << "OX: " << ox << "\n";
+	//	std::cout << "Position OX:   " << pack.OX() << "\n"
+	//		<< "Position OY:   " << pack.OY() << "\n"
+	//		<< "PWM X:         " << pack.PWMX() << "\n"
+	//		<< "PWM Y:         " << pack.PWMY() << "\n"
+	//		<< "Task to X:     " << pack.positionX() << "\n"
+	//		<< "Task to Y:     " << pack.positionY() << "\n"
+	//		<< "Random value:  " << (unsigned int)pack.randomValue() << "\n"
+	//		<< "Hash:          " << (unsigned int)pack.hash() << "\n";
+	//	std::cout << "===================" << std::endl;
+	//}
+
 
 #pragma endregion
 	return 0;
