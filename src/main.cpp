@@ -18,6 +18,8 @@
 #include <string>
 #include <sstream>
 #include <AsyncSerial.h>
+#include <string>
+#include <fstream>
 #include <windows.h>
 
 
@@ -31,6 +33,9 @@ public:
 		std::string value;
 		while (stream >> value) {
 			comm.push_back(std::move(value));
+		}
+		if (comm.size() == 0) {
+			comm.push_back(std::string(""));
 		}
 	}
 	const std::string& command() const{
@@ -53,7 +58,7 @@ private:
 
 class ComWorker {
 public:
-    ComWorker(size_t com_num, std::shared_ptr<Connector> loop) : _com_port(com_num, loop)
+	ComWorker(size_t com_num, std::shared_ptr<EventLoop> loop) : _com_port(com_num, loop->createConnector()), _loop(loop)
     {
        /* _com_port.setBaudRate(Serial::BaudRate::BR38400)
 			.disableParityControll()
@@ -76,7 +81,8 @@ public:
 		hConsoleOutputBuffer = GetStdHandle(STD_OUTPUT_HANDLE);
         GetConsoleMode(hConsoleInputBuffer, &fdwSaveOldMode);
         SetConsoleMode(hConsoleInputBuffer, ENABLE_WINDOW_INPUT);
-		loop->registerEvent(std::bind(&ComWorker::consoleCommands, this, std::placeholders::_1), Timer(0));
+		//loop->registerEvent(std::bind(&ComWorker::consoleCommands, this, std::placeholders::_1), Timer(0));
+		loop->addEvent(Event({ std::bind(&ComWorker::consoleCommands, this, std::placeholders::_1) }, "t"), Timer(0), 0);
     }
 
     void  readFromComPort(std::shared_ptr< std::vector<unsigned char> > data) {
@@ -84,15 +90,21 @@ public:
 		int a = 1;
 		SetConsoleCursorPosition(hConsoleOutputBuffer, { 0, 0 });
 		//ClearConsole();
+
 		PackageFactory packFactory;
         try{
            //std::shared_ptr<State> package =
                  //  std::dynamic_pointer_cast<State>(packFactory.createPackage(*data));
+			auto package = std::make_shared<State>(*data);
+			if (file.is_open()) {
+				std::cout << "print to file\n";
+				file << package->OX() << ' ' << package->OY() << std::endl;
+			}
 			for (auto &el : *data) {
 				std::cout << (unsigned int)el << "-";
 			}
 			std::cout << std::endl;
-			auto package = std::make_shared<State>(*data);
+			
 			for (auto &el : *data) {
 						std::cout << (unsigned int)el << "-";
 			}
@@ -110,6 +122,7 @@ public:
 					 << "Random value:  "<< (int)package->randomValue() << "   \n"
 					 << "Hash:          "<< (int)package->hash() << "   "<<std::endl;
         } catch (PackageParseError &exp) {
+			_com_port.flush();
 			std::cout << "package parse error";
         }
 		_com_port.async_read(36, std::bind(&ComWorker::readFromComPort, this, std::placeholders::_1));
@@ -148,6 +161,13 @@ public:
 		}
 		else if ("off" == c) {
 			command_off();
+		}
+		else if ("toFile" == c) {
+			command_file(comm);
+		}
+		else if ("exit" == c) {
+			command_off();
+			_loop->stop();
 		}
 		_com_port.flush();
 		return msg;
@@ -215,11 +235,29 @@ public:
 		mode.coilOff();
 		_com_port.async_write(std::make_shared<std::vector<unsigned char>>(mode.toBinary()));
 	}
+
+	void command_file(const Command &comm) {
+		if (comm.arg_count() != 1) {
+			std::cout << "must have one argumet - file path\n";
+			std::getchar();
+		}
+		else {
+			file.open(comm.arg(0), std::ofstream::out);
+		}
+		
+	}
+	~ComWorker() {
+		if (file.is_open()) {
+			file.close();
+		}
+	}
 private:
     AsyncSerial _com_port;
+	std::shared_ptr<EventLoop> _loop;
 	HANDLE hConsoleInputBuffer;
 	HANDLE hConsoleOutputBuffer;
     DWORD fdwSaveOldMode;
+	std::ofstream file;
 
 
 };
@@ -227,8 +265,10 @@ private:
 
 
 int main() {
+	system("echo %CD%");
+	std::getchar();
 	std::shared_ptr<EventLoop> loop = EventLoop::create();
-	ComWorker com(5, loop->createConnector());
+	ComWorker com(5, loop);
 	loop->run();
 	//_CrtDumpMemoryLeaks();
 
