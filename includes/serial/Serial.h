@@ -25,6 +25,14 @@ public:
 	   SYNC, ASYNC
 	};
 
+	enum DtrControll {
+		DTR_DISABLE, DTR_ENABLE, DTR_HANDSHAKE
+	};
+
+	enum RtsControll {
+		RTS_DISABLE, RTS_ENABLE, RTS_HANDSHAKE, RTS_TOGGLE
+	};
+
 	Serial(size_t port_mumber, Mode mode = SYNC);
 	Serial();
 	~Serial();
@@ -36,6 +44,18 @@ public:
 	Serial& enableParityControll(ParityControll pc);
 	Serial& disableParityControll();
 	Serial& setInternalBufferSize(size_t size);
+
+	Serial& dtrControll(DtrControll dtr);
+	DtrControll getDtrControll();
+
+	Serial& rtsControll(RtsControll rts);
+	RtsControll getRtsControll();
+
+	Serial& enableCtsFlow();
+	Serial& disableCtsFlow();
+	Serial& enableDsrFlow();
+	Serial& disableDsrFlow();
+
 	void open();
 	void close();
 	void flush();

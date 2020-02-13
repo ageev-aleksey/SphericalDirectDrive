@@ -25,6 +25,18 @@ public:
     AsyncSerial& enableParityControll(Serial::ParityControll pc);
     AsyncSerial& disableParityControll();
 	AsyncSerial& setInternalBufferSize(size_t size);
+
+	AsyncSerial& dtrControll(Serial::DtrControll dtr);
+	Serial::DtrControll getDtrControll();
+
+	AsyncSerial& rtsControll(Serial::RtsControll rts);
+	Serial::RtsControll getRtsControll();
+
+	AsyncSerial& enableCtsFlow();
+	AsyncSerial& disableCtsFlow();
+	AsyncSerial& enableDsrFlow();
+	AsyncSerial& disableDsrFlow();
+
     void open();
     void close();
 	void flush();

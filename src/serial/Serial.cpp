@@ -16,9 +16,13 @@ public:
 		port = number_port;
         hWinSerial = INVALID_HANDLE_VALUE;
         timeout = 0xFFFFFFFF;
-		boundrate = Serial::BaudRate::BR9600;
+		boudrate = Serial::BaudRate::BR9600;
 		stop_bits = Serial::StopBits::ONE;
 		parity = Serial::ParityControll::NOT_CONTROLL;
+		DtrControll = Serial::DTR_DISABLE;
+		RtsControll = Serial::RTS_DISABLE;
+		CtsFlow = false;
+		DsrFlow = false;
 		buffer_write_when_read_com = nullptr;
 		async_write_started = false;
 		sync_read = { 0 };
@@ -49,13 +53,13 @@ public:
 		}
 	    timeout = ms;
 	}
-	void setBaudRate(Serial::BaudRate _boundrate) {
+	void setBaudRate(Serial::BaudRate _boudrate) {
 		if (isOpen()) {
 			throw SerialError("Serial port is already opened."
 				"Close port and then change baud rate.", 
 				SerialError::NOT_SYSTEM_CALL_ERROR);
 		}
-		boundrate = _boundrate;
+		boudrate = _boudrate;
 	}
 
 	void setPort(size_t num_port) {
@@ -99,6 +103,71 @@ public:
 
 	}
 
+	
+	void dtrControll(Serial::DtrControll dtr) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then disable DTR controll.",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		DtrControll = dtr;
+	}
+	Serial::DtrControll getDtrControll() {
+		return DtrControll;
+	}
+
+	void rtsControll(Serial::RtsControll rts) {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then enable RTS controll.",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		RtsControll = rts;
+	}
+
+	Serial::RtsControll getRtsControll() {
+		return RtsControll;
+	}
+
+	void enableCtsFlow() {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then disable RTS controll.",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		CtsFlow = true;
+	}
+	void disableCtsFlow() {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then disable RTS controll.",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		CtsFlow = false;
+	}
+	bool isCtsFlow() {
+		return CtsFlow;
+	}
+
+	void enableDsrFlow() {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then disable RTS controll.",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		DsrFlow = true;
+	}
+	void disableDsrFlow() {
+		if (isOpen()) {
+			throw SerialError("Serial port is already opened."
+				"Close port and then disable RTS controll.",
+				SerialError::NOT_SYSTEM_CALL_ERROR);
+		}
+		DsrFlow = false;
+	}
+	bool isDsrFlow() {
+		return DsrFlow;
+	}
 
 
 	void open() {
@@ -112,19 +181,32 @@ public:
 								GetLastError());
 		}
 
-		COMMCONFIG com_config;
-		DWORD com_config_size = 0;
-		if (GetCommConfig(hWinSerial, &com_config, &com_config_size)) {
-			throw SerialOpenError(std::string("failed get com port default configuration"),
-								 GetLastError());
-		}
-		com_config.dcb.BaudRate = _to(boundrate);
-		com_config.dcb.StopBits = _to(stop_bits);
-		com_config.dcb.Parity = _to(parity);
-		if (SetCommConfig(hWinSerial, &com_config, sizeof(com_config))) {
-			throw SerialOpenError(std::string("failed set com port configuration"),
+		DCB dcb = { 0 };
+		dcb.DCBlength = sizeof(DCB);
+		if (!::GetCommState(hWinSerial, &dcb))
+		{
+			close();
+			throw SerialOpenError(
+				"error get config of serial port (windows DCB struct)",
 				GetLastError());
 		}
+		dcb.BaudRate = _to(boudrate);
+		dcb.ByteSize = 8;
+		dcb.Parity = _to(parity);
+		dcb.StopBits = _to(stop_bits);
+		dcb.fOutxCtsFlow = _to(CtsFlow);
+		dcb.fOutxDsrFlow = _to(DsrFlow);
+		dcb.fDtrControl = _to(DtrControll);//DTR_CONTROL_DISABLE; 
+		dcb.fDsrSensitivity = 0;
+		dcb.fRtsControl = _to(RtsControll);//RTS_CONTROL_DISABLE;
+		if (!::SetCommState(hWinSerial, &dcb))
+		{
+			close();
+			throw SerialOpenError(
+				"error set config of serial port (windows DCB struct)",
+				GetLastError());
+		}
+		
 
 		// Now set the timeouts ( we control the timeout overselves using WaitForXXX()
 		COMMTIMEOUTS timeouts;
@@ -320,6 +402,35 @@ private:
 			return NOPARITY;
 		}
 	}
+	int _to(bool v) {
+		if (v)
+			return TRUE;
+		else
+			return FALSE;
+	}
+	int _to(Serial::DtrControll v) {
+		switch (v) {
+		case Serial::DTR_DISABLE: 
+			return DTR_CONTROL_DISABLE;
+		case Serial::DTR_ENABLE:
+			return DTR_CONTROL_ENABLE;
+		case Serial::DTR_HANDSHAKE:
+			return DTR_CONTROL_HANDSHAKE;
+		}
+	}
+
+	int _to(Serial::RtsControll v) {
+		switch (v) {
+		case Serial::RTS_DISABLE:
+			return RTS_CONTROL_DISABLE;
+		case Serial::RTS_ENABLE:
+			return RTS_CONTROL_ENABLE;
+		case Serial::RTS_HANDSHAKE:
+			return RTS_CONTROL_HANDSHAKE;
+		case Serial::RTS_TOGGLE:
+			return RTS_CONTROL_TOGGLE;
+		}
+	}
 
 	void read_sync(std::shared_ptr< std::vector<unsigned char> > &buffer_ptr){
 	    if(!isOpen()) {
@@ -388,9 +499,13 @@ private:
 	void (SerialImpl::*func_write)(const std::shared_ptr< std::vector<unsigned char> >&);
 	HANDLE hWinSerial;
 	size_t port;
-	Serial::BaudRate boundrate;
+	Serial::BaudRate boudrate;
 	Serial::StopBits stop_bits;
 	Serial::ParityControll parity;
+	Serial::DtrControll DtrControll;
+	Serial::RtsControll RtsControll;
+	bool CtsFlow;
+	bool DsrFlow;
 	size_t timeout;//таймаут синхронного чтения.
 	DWORD _mode; //режим. Асинхронный или синхронный
 	unsigned char *internal_buffer;//временный буфер, в который записывает ОС
@@ -516,3 +631,36 @@ void Serial::flush() {
 	pimpl->flush();
 }
 
+
+Serial& Serial::dtrControll(Serial::DtrControll dtr) {
+	pimpl->dtrControll(dtr);
+	return *this;
+}
+
+Serial::DtrControll Serial::getDtrControll() {
+	return pimpl->getDtrControll();
+}
+
+Serial& Serial::rtsControll(Serial::RtsControll rts) {
+	pimpl->rtsControll(rts);
+	return *this;
+}
+Serial::RtsControll Serial::getRtsControll() {
+	return pimpl->getRtsControll();
+}
+Serial& Serial::enableCtsFlow() {
+	pimpl->enableCtsFlow();
+	return *this;
+}
+Serial& Serial::disableCtsFlow() {
+	pimpl->disableCtsFlow();
+	return *this;
+}
+Serial& Serial::enableDsrFlow() {
+	pimpl->enableDsrFlow();
+	return *this;
+}
+Serial& Serial::disableDsrFlow() {
+	pimpl->disableDsrFlow();
+	return *this;
+}

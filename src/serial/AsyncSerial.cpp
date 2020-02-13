@@ -90,3 +90,37 @@ AsyncSerial& AsyncSerial::setTimeout(size_t ms) {
 	com_port.setTimeout(ms);
 	return *this;
 }
+
+AsyncSerial& AsyncSerial::dtrControll(Serial::DtrControll dtr) {
+	com_port.dtrControll(dtr);
+	return *this;
+}
+Serial::DtrControll AsyncSerial::getDtrControll() {
+	return com_port.getDtrControll();
+}
+
+AsyncSerial& AsyncSerial::rtsControll(Serial::RtsControll rts) {
+	com_port.rtsControll(rts);
+	return *this;
+}
+Serial::RtsControll AsyncSerial::getRtsControll() {
+	return com_port.getRtsControll();
+}
+
+AsyncSerial& AsyncSerial::enableCtsFlow() {
+	com_port.enableCtsFlow();
+	return *this;
+}
+AsyncSerial& AsyncSerial::disableCtsFlow() {
+	com_port.disableCtsFlow();
+	return *this;
+}
+
+AsyncSerial& AsyncSerial::enableDsrFlow() {
+	com_port.enableDsrFlow();
+	return *this;
+}
+AsyncSerial& AsyncSerial::disableDsrFlow() {
+	com_port.disableDsrFlow();
+	return *this;
+}

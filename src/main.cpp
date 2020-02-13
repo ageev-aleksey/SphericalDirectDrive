@@ -158,7 +158,7 @@ public:
 	void command_light(const Command &comm) {
 		static bool light_state = true;
 		Light light;
-		if (comm.arg_count() == 1) {
+		if (comm.arg_count() == 0) {
 			
 			if (light_state) {
 				light_state = false;
