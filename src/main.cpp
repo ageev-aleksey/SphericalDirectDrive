@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <crtdbg.h>
 
+
+#include "system/GlobalObjectStorage.h"
+#include "log4cpp/category.hh"
+#include "log4cpp/fileappender.hh"
+#include "log4cpp/basiclayout.hh"
 #include "PackageFactory.h"
 #include "PackageError.h"
 #include "State.h"
@@ -265,11 +270,20 @@ private:
 
 
 int main() {
-	/*system("echo %CD%");
+    GlobalStorage::init();
+    //TODO нужна обертка над логгером, так как глобальное хранилище не поддерживает данный способ инициализации объекта
+    log4cpp::Appender *logMehod = new log4cpp::FileAppender("FriteToFile", "log.txt");
+    logMehod->setLayout(new log4cpp::BasicLayout());
+    log4cpp::Category *logMain= &log4cpp::Category::getInstance("Main");
+    logMain->setAdditivity(false);
+    logMain->setAppender(logMehod);
+    logMain->setPriority(log4cpp::Priority::DEBUG);
+
+	system("echo %CD%");
 	std::getchar();
 	std::shared_ptr<EventLoop> loop = EventLoop::create();
 	ComWorker com(5, loop);
-	loop->run();*/
+	loop->run();
 	//_CrtDumpMemoryLeaks();
 
 #pragma region --===binary_copy_test===--

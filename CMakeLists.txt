@@ -11,6 +11,9 @@ if(Boost_FOUND)
 	message(STATUS "Boost found version: ${Boost_VERSION}" )
 endif()
 
+add_subdirectory(${PROJECT_SOURCE_DIR}/libs/log4cpp)
+set(LOG4CPP_INCLUDE ${PROJECT_SOURCE_DIR}/libs/log4cpp/include)
+
 	set(SOURCE_EVENT_LOOP
 			${SOURCES_DIR}/event_loop/IMessage.cpp
 			${SOURCES_DIR}/event_loop/Connector.cpp
@@ -41,19 +44,26 @@ endif()
 			${SOURCES_DIR}/serial/SerialError.cpp
 			${SOURCES_DIR}/serial/AsyncSerial.cpp)
 		#${SOURCES_DIR}/serial/Buffer.cpp)
+	set(SOURCE_SYSTEM
+			${SOURCES_DIR}/system/GlobalObjectStorage.cpp
+			${SOURCES_DIR}/system/GlobalObjectBase.cpp
+			${SOURCES_DIR}/system/SystemExceptions.cpp)
 
 	add_library(${PROJECT_NAME} STATIC ${SOURCE_SERIALIZATION}
-				${SOURCE_SDD_PROTOCOL} ${SOURCE_SERIAL} ${SOURCE_EVENT_LOOP})
+				${SOURCE_SDD_PROTOCOL} ${SOURCE_SERIAL}
+			${SOURCE_EVENT_LOOP} ${SOURCE_SYSTEM})
 	
 	add_executable(MAIN ${SOURCES_DIR}/main.cpp)
 	target_link_libraries(MAIN ${PROJECT_NAME})
 
-	target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+	target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${LOG4CPP_LIBRARY_NAME})
 	target_include_directories(${PROJECT_NAME} PUBLIC 
 								${INCLUDES_DIR}/serialization 
 								${INCLUDES_DIR}/sdd_protocol
 								${INCLUDES_DIR}/serial
 								${INCLUDES_DIR}/event_loop
+								${INCLUDES_DIR}
+								${LOG4CPP_INCLUDE}
 								${Boost_INCLUDE_DIRS})
 	#add_library(proj::protocol ALIAS ${PROJECT_NAME})
 

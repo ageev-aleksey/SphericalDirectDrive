@@ -4,13 +4,14 @@ project(TEST_SPPU_SERIAL)
 
 set(GTEST_DIR ${PROJECT_SOURCE_DIR}/googletest)
 set(TESTS_SOURCE
-	 ${PROJECT_SOURCE_DIR}/src/test_buffer.cpp
-	 ${PROJECT_SOURCE_DIR}/src/test_message.cpp
-	 ${PROJECT_SOURCE_DIR}/src/test_package.cpp
-	 ${PROJECT_SOURCE_DIR}/src/test_field.cpp
-	 ${PROJECT_SOURCE_DIR}/src/test_mutex.cpp
-	  ${PROJECT_SOURCE_DIR}/src/test_EventLoop.cpp
-		${PROJECT_SOURCE_DIR}/src/test_PackageBuffer.cpp)
+		${PROJECT_SOURCE_DIR}/src/test_buffer.cpp
+		${PROJECT_SOURCE_DIR}/src/test_message.cpp
+		${PROJECT_SOURCE_DIR}/src/test_package.cpp
+		${PROJECT_SOURCE_DIR}/src/test_field.cpp
+		${PROJECT_SOURCE_DIR}/src/test_mutex.cpp
+		${PROJECT_SOURCE_DIR}/src/test_EventLoop.cpp
+		${PROJECT_SOURCE_DIR}/src/test_PackageBuffer.cpp
+		${PROJECT_SOURCE_DIR}/src/test_GlobalObjectStorage.cpp)
 
 if(${MSVC})
 	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
