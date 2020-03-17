@@ -6,6 +6,10 @@ set(SOURCES_DIR ${PROJECT_SOURCE_DIR}/src)
 set(INCLUDES_DIR ${PROJECT_SOURCE_DIR}/includes)
 set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 
+find_package(Boost REQUIRED)
+if(Boost_FOUND)
+	message(STATUS "Boost found version: ${Boost_VERSION}" )
+endif()
 
 	set(SOURCE_EVENT_LOOP
 			${SOURCES_DIR}/event_loop/IMessage.cpp
@@ -27,7 +31,8 @@ set(TESTS_DIR ${PROJECT_SOURCE_DIR}/tests)
 			${SOURCES_DIR}/sdd_protocol/State.cpp
 			${SOURCES_DIR}/sdd_protocol/Position.cpp
 			${SOURCES_DIR}/sdd_protocol/Mode.cpp
-			${SOURCES_DIR}/sdd_protocol/Light.cpp)
+			${SOURCES_DIR}/sdd_protocol/Light.cpp
+			${SOURCES_DIR}/sdd_protocol/PackageBuffer.cpp)
 
 	set(SOURCE_SERIAL
 			${SOURCES_DIR}/serial/Mutex.cpp

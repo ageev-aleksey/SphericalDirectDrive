@@ -8,7 +8,7 @@
 using namespace std::chrono_literals;
 int main() {
     Serial com(2, Serial::Mode::ASYNC);
-    com.setBaudRate(Serial::BaudRate::BR9600);
+    com.setBaudRate(Serial::BR38400);
     com.open();
 	State pack;
 	pack.setOX(10);
@@ -23,7 +23,32 @@ int main() {
 	std::vector<unsigned char> buffer;
 	com.read(std::move(ptr_for_read));
 	unsigned char command_code = 0;
-	while (true) {
+
+	for(int i = 0; i < 3;) {
+	    if(com.isWriteAlready()) {
+            i++;
+	        auto data = pack.toBinary();
+	        std::vector<unsigned char> half1;
+            std::vector<unsigned char> half2;
+            for(int i = 0; i < data.size()/2; i++) {
+                half1.push_back(data[i]);
+            }
+            for(int i = data.size()/2; i < data.size(); i++) {
+                half2.push_back(data[i]);
+            }
+	        auto ptr = std::make_shared<std::vector<unsigned char>>(half1);
+            com.write(ptr);
+            std::cout << "1 ";
+            while(!com.isWriteAlready());
+            _sleep(100);
+            ptr = std::make_shared<std::vector<unsigned char>>(half2);
+            com.write(ptr);
+            std::cout << "2\n";
+	    }
+	}
+
+
+	/*while (true) {
 		if (com.isWriteAlready()) {
 			com.write(ptr);
 		}
@@ -49,7 +74,7 @@ int main() {
 			}
 			
 		}
-	}
+	}*/
        
 
 }

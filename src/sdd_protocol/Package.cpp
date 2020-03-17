@@ -163,3 +163,7 @@ void Package::fromBinary(const std::vector<byte_t> &bin_buff) {
                                 std::string(". This binary buffer have langth a ") +std::to_string(bin_buff.size()));
     }
 }
+
+size_t Package::size() {
+    return bworker.size() + 1;
+}

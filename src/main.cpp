@@ -265,30 +265,30 @@ private:
 
 
 int main() {
-	system("echo %CD%");
+	/*system("echo %CD%");
 	std::getchar();
 	std::shared_ptr<EventLoop> loop = EventLoop::create();
 	ComWorker com(5, loop);
-	loop->run();
+	loop->run();*/
 	//_CrtDumpMemoryLeaks();
 
 #pragma region --===binary_copy_test===--
-	/*long long value = -256;
-	std::vector<unsigned char> bytes(sizeof(value));
-	unsigned char *bptr = reinterpret_cast<unsigned char*>(&value);
-	for (size_t i = 0; i < sizeof(value); i++) {
-	    bytes[i] = bptr[i];
-	}
-	for(auto &el : bytes) {
-	    std::cout << (unsigned int)el << "-";
-	}
-	long long value2 = 0;
-	bptr = reinterpret_cast<unsigned char*>(&value2);
-	for (size_t i = 0; i < sizeof(long long); i++) {
-		bptr[i] = bytes[i];
-	}
-	std::cout << std::endl;
-	std::cout << value2 << std::endl;*/
+	//long long value = -256;
+	//std::vector<unsigned char> bytes(sizeof(value));
+	//unsigned char *bptr = reinterpret_cast<unsigned char*>(&value);
+	//for (size_t i = 0; i < sizeof(value); i++) {
+	//    bytes[i] = bptr[i];
+	//}
+	//for(auto &el : bytes) {
+	//    std::cout << (unsigned int)el << "-";
+	//}
+	//long long value2 = 0;
+	//bptr = reinterpret_cast<unsigned char*>(&value2);
+	//for (size_t i = 0; i < sizeof(long long); i++) {
+	//	bptr[i] = bytes[i];
+	//}
+	//std::cout << std::endl;
+	//std::cout << value2 << std::endl;
 #pragma endregion
 
 #pragma region --===field_test===--
@@ -303,43 +303,54 @@ int main() {
 #pragma endregion
 
 #pragma region --===FromBinaryTest===--
-	//Serial com_port(5, Serial::ASYNC);
-	//com_port.setBaudRate(Serial::BR38400)
-	//	.setTimeout(50)
-	//	.disableParityControll()
-	//	.disableCtsFlow()
-	//	.disableDsrFlow()
-	//	.setStopBits(Serial::ONE)
-	//	.open();
-	//std::shared_ptr<std::vector<unsigned char>> buff = std::make_shared<std::vector<unsigned char>>(36);
-	//HANDLE hConsoleOutputBuffer = GetStdHandle(STD_OUTPUT_HANDLE);
-	//for (int i = 0; i < 10000; i++) {
-	//	com_port.flush();
-	//	com_port.read(buff);
-	//	while(com_port.isReadAlready() == nullptr) {}
-
-	//	//SetConsoleCursorPosition(hConsoleOutputBuffer, { 0, 0 });
-	//	
-
-	//	for (auto &el : *buff) {
-	//		std::cout << (unsigned int)el << "-";
-	//	}
-	//	std::cout << "\n";
-	//	State pack(*buff);
-	//	short ox = 0;
-	//	ox |= (*buff)[2];
-	//	ox |= (*buff)[3] << 8;
-	//	std::cout << "OX: " << ox << "\n";
-	//	std::cout << "Position OX:   " << pack.OX() << "\n"
-	//		<< "Position OY:   " << pack.OY() << "\n"
-	//		<< "PWM X:         " << pack.PWMX() << "\n"
-	//		<< "PWM Y:         " << pack.PWMY() << "\n"
-	//		<< "Task to X:     " << pack.positionX() << "\n"
-	//		<< "Task to Y:     " << pack.positionY() << "\n"
-	//		<< "Random value:  " << (unsigned int)pack.randomValue() << "\n"
-	//		<< "Hash:          " << (unsigned int)pack.hash() << "\n";
-	//	std::cout << "===================" << std::endl;
-	//}
+	Serial com_port(1, Serial::ASYNC);
+	com_port.setBaudRate(Serial::BR38400)
+		//.setTimeout(50)
+		.setTimeout(MAXDWORD)
+		.disableParityControll()
+		.disableCtsFlow()
+		.disableDsrFlow()
+		.setStopBits(Serial::ONE)
+		.open();
+	std::shared_ptr<std::vector<unsigned char>> buff = std::make_shared<std::vector<unsigned char>>(36);
+	HANDLE hConsoleOutputBuffer = GetStdHandle(STD_OUTPUT_HANDLE);
+	com_port.flush();
+	int k = 0;
+	for (int i = 0; i < 10000; i++) {
+		//com_port.flush();
+		com_port.read(buff);
+		while(com_port.isReadAlready() == nullptr) {
+			if (k == 10) {
+				break;
+			}
+		}
+		k++;
+		//SetConsoleCursorPosition(hConsoleOutputBuffer, { 0, 0 });
+		
+		/*if ((*buff)[0] != 20) {
+			com_port.flush();
+			continue;
+		}*/
+		for (auto &el : *buff) {
+			std::cout << (unsigned int)el << "-";
+		}
+		std::cout << "\n";
+		/*std::cout << "\n";
+		State pack(*buff);
+		short ox = 0;
+		ox |= (*buff)[2];
+		ox |= (*buff)[3] << 8;
+		std::cout << "OX: " << ox << "\n";
+		std::cout << "Position OX:   " << pack.OX() << "\n"
+			<< "Position OY:   " << pack.OY() << "\n"
+			<< "PWM X:         " << pack.PWMX() << "\n"
+			<< "PWM Y:         " << pack.PWMY() << "\n"
+			<< "Task to X:     " << pack.positionX() << "\n"
+			<< "Task to Y:     " << pack.positionY() << "\n"
+			<< "Random value:  " << (unsigned int)pack.randomValue() << "\n"
+			<< "Hash:          " << (unsigned int)pack.hash() << "\n";
+		std::cout << "===================" << std::endl;*/
+	}
 
 
 #pragma endregion

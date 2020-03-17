@@ -9,7 +9,8 @@ set(TESTS_SOURCE
 	 ${PROJECT_SOURCE_DIR}/src/test_package.cpp
 	 ${PROJECT_SOURCE_DIR}/src/test_field.cpp
 	 ${PROJECT_SOURCE_DIR}/src/test_mutex.cpp
-	  ${PROJECT_SOURCE_DIR}/src/test_EventLoop.cpp)
+	  ${PROJECT_SOURCE_DIR}/src/test_EventLoop.cpp
+		${PROJECT_SOURCE_DIR}/src/test_PackageBuffer.cpp)
 
 if(${MSVC})
 	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)

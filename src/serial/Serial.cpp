@@ -209,12 +209,14 @@ public:
 		
 
 		// Now set the timeouts ( we control the timeout overselves using WaitForXXX()
+		//TODO Разобраться с таймаутами. При текущих настройках таймаут определяется 
+		//при вызове функции WaitForXXX() в которые и передается таймаут
 		COMMTIMEOUTS timeouts;
-		timeouts.ReadIntervalTimeout = timeout; //максимальное время ожидания получения очередного нового символа
+		timeouts.ReadIntervalTimeout = MAXDWORD;//timeout; //максимальное время ожидания получения очередного нового символа
 		timeouts.ReadTotalTimeoutMultiplier = 0;
-		timeouts.ReadTotalTimeoutConstant = 0xFFFFFFFF;
+		timeouts.ReadTotalTimeoutConstant = 0;//0xFFFFFFFF;
 		timeouts.WriteTotalTimeoutMultiplier = 0;
-		timeouts.WriteTotalTimeoutConstant = 0xFFFFFFFF;
+		timeouts.WriteTotalTimeoutConstant = 0;//0xFFFFFFFF;
 		if (!SetCommTimeouts(hWinSerial, &timeouts)) {
 			throw SerialOpenError(std::string("failed set timeouts for com port"),
 				GetLastError());
@@ -300,20 +302,25 @@ public:
 			DWORD k = 0;
 			if (wait == WAIT_OBJECT_0) {
 				if (GetOverlappedResult(hWinSerial, &sync_read, &read, FALSE)) {
-					for (size_t i = 0; i < read; i++) {
-						assert(read_from_last_check < buffer_write_when_read_com->size());
-						(*buffer_write_when_read_com)[read_from_last_check] = internal_buffer[i];
-						read_from_last_check++;
-					}
-					if (read_from_last_check == buffer_write_when_read_com->size()) {
-						std::shared_ptr< std::vector<unsigned char> > tmp = std::move( buffer_write_when_read_com);
-						read_from_last_check = 0;
-						return std::move(tmp);
-					}
-					if ((buffer_write_when_read_com->size() - read_from_last_check) < internal_buffer_size) {
-						k = internal_buffer_size - (buffer_write_when_read_com->size() - read_from_last_check);
-					}
-					ReadFile(hWinSerial, internal_buffer, internal_buffer_size - k, &read, &sync_read);
+					//if (read != 0) {
+						for (size_t i = 0; i < read; i++) {
+							//assert(read_from_last_check < buffer_write_when_read_com->size());
+							if (read_from_last_check >= buffer_write_when_read_com->size()) {
+								std::cout << "ERROR!";
+							}
+							(*buffer_write_when_read_com)[read_from_last_check] = internal_buffer[i];
+							read_from_last_check++;
+						}
+						if (read_from_last_check == buffer_write_when_read_com->size()) {
+							std::shared_ptr< std::vector<unsigned char> > tmp = std::move( buffer_write_when_read_com);
+							read_from_last_check = 0;
+							return std::move(tmp);
+						}
+						if ((buffer_write_when_read_com->size() - read_from_last_check) < internal_buffer_size) {
+							k = internal_buffer_size - (buffer_write_when_read_com->size() - read_from_last_check);
+						}
+						ReadFile(hWinSerial, internal_buffer, internal_buffer_size - k, NULL, &sync_read);
+					//}
 				}
 			}
 			return nullptr;

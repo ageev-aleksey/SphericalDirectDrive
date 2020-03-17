@@ -1,6 +1,7 @@
 #ifndef _STATE_H_
 #define _STATE_H_
 #include "package.h"
+//Todo move constructor
 class State : public Package {
 public:
 	State();
