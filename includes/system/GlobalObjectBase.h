@@ -4,7 +4,7 @@
 
 #ifndef SPPU_SERIAL_GLOBALOBJECTBASE_H
 #define SPPU_SERIAL_GLOBALOBJECTBASE_H
-
+#include <cstddef>
 class GlobalObjectBase {
 public:
     GlobalObjectBase();

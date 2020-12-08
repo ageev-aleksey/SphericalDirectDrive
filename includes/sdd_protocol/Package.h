@@ -18,7 +18,12 @@ public:
 
     template<typename Itr>
      static byte_t hash(Itr itr_begin, Itr itr_end) {
-        return hash<Itr>(itr_begin, itr_end, std::iterator_traits<Itr>::iterator_category());
+        // return hash<Itr>(itr_begin, itr_end, std::iterator_traits<Itr>::iterator_category());
+        byte_t sum = 0;
+        for (Itr itr = itr_begin; itr != itr_end; itr++) {
+            sum -= *itr;
+        }
+        return sum;
     }
 	virtual ~Package();
 	std::vector<unsigned char> toBinary() const;
@@ -37,14 +42,14 @@ protected:
 	Message bworker;//TODO реализовать кеширование
 	std::string package_name;
 private:
-	template<typename Itr>
+	/*template<typename Itr>
 	static byte_t hash(Itr itr_begin, Itr itr_end, std::input_iterator_tag) {
 		byte_t sum = 0;
 		for (Itr itr = itr_begin; itr != itr_end; itr++) {
 			sum -= *itr;
 		}
 		return sum;
-	}
+	}*/
 
 };
 #endif

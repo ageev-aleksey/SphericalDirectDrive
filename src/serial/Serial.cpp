@@ -6,7 +6,7 @@
 #include <Windows.h>
 #include <iostream>
 
-DWORD WINAPI ThredProc(_In_ LPVOID lpParametr);
+DWORD WINAPI ThredProc( LPVOID lpParametr);
 
 class SerialImpl {
 public:
